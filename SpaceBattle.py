@@ -1,7 +1,14 @@
 # Import modules
+import pygame
+import Player
 # Import classes and constants from modules
-from Player import *
+from pygame import(
+    KEYDOWN,
+    K_ESCAPE,
+    QUIT,
+)
 
+from Player import Player
 
 # Define screen parameters
 SCREEN_WIDTH = 800
@@ -14,15 +21,21 @@ pygame.init()
 # Create screen object
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 
+# Make screen white
+screen.fill((255, 255, 255))
+
 # Instantiate player
 player = Player()
 player.WIDTH = SCREEN_WIDTH
 player.HEIGHT = SCREEN_HEIGHT
 
+# Draw player on screen
+screen.blit(player.surf, player.rect)
 
 # Set up loop using boolean variable
 running = True
 while running:
+
     # Look at every event in queue
     for event in pygame.event.get():
         # Did user hit a key?
@@ -40,12 +53,6 @@ while running:
 
     # Update player location
     player.update(pressed_keys)
-
-    # Make screen white
-    screen.fill((255, 255, 255))
-
-    # Draw player on screen
-    screen.blit(player.surf, player.rect)
 
     # Update display
     pygame.display.flip()

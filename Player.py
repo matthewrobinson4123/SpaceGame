@@ -1,7 +1,12 @@
 # Import modules, classes, and constants
 import pygame
 # Import SpaceBattle
-from pygame.locals import *
+from pygame.locals import (
+    K_UP,
+    K_DOWN,
+    K_LEFT,
+    K_RIGHT,
+)
 
 WIDTH = 0
 HEIGHT = 0
