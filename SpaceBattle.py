@@ -1,27 +1,24 @@
-# Import pygame module
-import pygame
+# Import modules
+# Import classes and constants from modules
+from Player import *
 
-# Import pygame.locals for easier access to key coordinates
-# Updated to conform to flake8 and black standards
-from pygame.locals import (
-    K_UP,
-    K_DOWN,
-    K_LEFT,
-    K_RIGHT,
-    K_ESCAPE,
-    KEYDOWN,
-    QUIT,
-)
-
-# Initialize pygame
-pygame.init()
 
 # Define screen parameters
 SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 600
 
+
+# Initialize pygame
+pygame.init()
+
 # Create screen object
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+
+# Instantiate player
+player = Player()
+player.WIDTH = SCREEN_WIDTH
+player.HEIGHT = SCREEN_HEIGHT
+
 
 # Set up loop using boolean variable
 running = True
@@ -31,25 +28,24 @@ while running:
         # Did user hit a key?
         if event.type == KEYDOWN:
             # User hit escape? Stop loop
-            if event.type == K_ESCAPE:
+            if event.key == K_ESCAPE:
                 running = False
 
         # Did user click to close app? stop loop
-        if event.type == QUIT:
+        elif event.type == QUIT:
             running = False
+
+    # Get the set of keys pressed and check for user input
+    pressed_keys = pygame.key.get_pressed()
+
+    # Update player location
+    player.update(pressed_keys)
 
     # Make screen white
     screen.fill((255, 255, 255))
 
-    # Create surface
-    surf = pygame.Surface((50, 50))
+    # Draw player on screen
+    screen.blit(player.surf, player.rect)
 
-    # Give surface a color to separate from background
-    surf.fill((0, 0, 0))
-    rect = surf.get_rect()
-
-    # Drawing onto screen
-    screen.blit(surf, ((SCREEN_WIDTH-surf.get_width())/2, (SCREEN_HEIGHT-surf.get_height())/2))
+    # Update display
     pygame.display.flip()
-
-
