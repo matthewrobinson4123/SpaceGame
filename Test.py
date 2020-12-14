@@ -248,26 +248,31 @@ while running:
         elif event.type == QUIT:
             running = False
 
-        # Add an enemy?
-        elif event.type == ADDENEMY:
-            new_enemy = Enemy()
-            enemies.add(new_enemy)
-            all_sprites.add(new_enemy)
-
         elif event.type == ADDSTAR:
             new_star = Star()
             stars.add(new_star)
             all_sprites.add(new_star)
 
-        elif stage >= 3:
-            if event.type == ADDSHIP:
-                new_ship = Ship()
-                ships.add(new_ship)
-                enemies.add(new_ship)
-                all_sprites.add(new_ship)
+        # Add an enemy?
 
-        elif stage == 6:
-            pygame.time.set_timer(ADDSHIP, 400)
+        if event.type == ADDENEMY:
+            new_enemy = Enemy()
+            enemies.add(new_enemy)
+            all_sprites.add(new_enemy)
+
+        if stage >= 3:
+            if stage < 10:
+                if event.type == ADDSHIP:
+                    new_ship = Ship()
+                    ships.add(new_ship)
+                    enemies.add(new_ship)
+                    all_sprites.add(new_ship)
+            if stage == 4:
+                pygame.time.set_timer(ADDSHIP, 400)
+
+        if stage == 5:
+            pygame.time.set_timer(ADDENEMY, 300)
+            pygame.event.set_blocked(ADDSHIP)
 
     # Get the set of keys pressed and check for user input and then update
     pressed_keys = pygame.key.get_pressed()
