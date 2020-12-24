@@ -21,6 +21,8 @@ SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 600
 score = 0
 stage = 1
+BOSSHEALTH = 250
+
 
 # Draw text onto screen
 def draw_text(surf, text, size, x, y):
@@ -29,6 +31,7 @@ def draw_text(surf, text, size, x, y):
     text_rect = text.get_rect()
     text_rect.midtop = (x, y)
     surf.blit(text, text_rect)
+
 
 # Check and update which round it is
 def check_round():
@@ -52,6 +55,7 @@ def check_round():
     elif score == 5500:
         stage += 1
 
+
 # Define a Player object
 class Player(pygame.sprite.Sprite):
     def __init__(self):
@@ -59,6 +63,9 @@ class Player(pygame.sprite.Sprite):
         self.surf = pygame.image.load("images/Player.png")
         self.surf.set_colorkey((255, 255, 255,), RLEACCEL)
         self.rect = self.surf.get_rect()
+        self.lives = 1
+        self.p1 = False
+        self.p2 = False
 
     def update(self, pressed_keys):
         if pressed_keys[K_UP]:
@@ -80,10 +87,18 @@ class Player(pygame.sprite.Sprite):
         if self.rect.bottom >= SCREEN_HEIGHT:
             self.rect.bottom = SCREEN_HEIGHT
 
+    # shoot lasers
     def shoot(self):
-        new_laser = Laser(self.rect.right, self.rect.centery)
+        new_laser = Laser(self.rect.right, self.rect.centery, 0)
         lasers.add(new_laser)
         all_sprites.add(new_laser)
+        if self.p1:
+            upper_laser = Laser(self.rect.right, self.rect.centery, 1)
+            lower_laser = Laser(self.rect.right, self.rect.centery, 2)
+            lasers.add(upper_laser)
+            lasers.add(lower_laser)
+            all_sprites.add(upper_laser)
+            all_sprites.add(lower_laser)
 
 
 # Define enemy class
@@ -107,6 +122,7 @@ class Enemy(pygame.sprite.Sprite):
         if self.rect.right < 0:
             self.kill()
 
+
 # Define enemy ship class
 class Ship(pygame.sprite.Sprite):
     def __init__(self):
@@ -119,7 +135,7 @@ class Ship(pygame.sprite.Sprite):
                 random.randint(0, SCREEN_HEIGHT)
             )
         )
-        self.speed = random.randint(5, 10 )
+        self.speed = random.randint(5, 10)
 
     # Move sprite by speed
     # Remove off screen
@@ -127,6 +143,12 @@ class Ship(pygame.sprite.Sprite):
         self.rect.move_ip(-self.speed, 0)
         if self.rect.right < 0:
             self.kill()
+
+    # add shooting for enemy
+    def shoot(self):
+        new_laser = Laser(self.rect.left, self.rect.centery, 3)
+        enemies.add(new_laser)
+        all_sprites.add(new_laser)
 
 
 # Define the star object
@@ -150,7 +172,7 @@ class Star(pygame.sprite.Sprite):
 
 
 class Laser(pygame.sprite.Sprite):
-    def __init__(self, x, y):
+    def __init__(self, x, y, z):
         super().__init__()
         self.surf = pygame.image.load("images/bullet.png").convert()
         self.surf.set_colorkey((0, 0, 0), RLEACCEL)
@@ -158,11 +180,21 @@ class Laser(pygame.sprite.Sprite):
         self.rect.left = x
         self.rect.bottom = y
         self.speed = 10
+        self.id = z
 
+    # check what type of laser and update location on screen
     def update(self):
-        self.rect.move_ip(self.speed, 0)
+        if self.id == 0:
+            self.rect.move_ip(self.speed, 0)
+        elif self.id == 1:
+            self.rect.move_ip(self.speed, 10)
+        elif self.id == 2:
+            self.rect.move_ip(self.speed, -10)
+        elif self.id == 3:
+            self.rect.move_ip(-10, 0)
         if self.rect.left >= SCREEN_WIDTH:
             self.kill()
+
 
 # Setup for music and sound playback
 pygame.mixer.init()
@@ -191,6 +223,10 @@ pygame.time.set_timer(ADDSTAR, 100)
 ADDSHIP = pygame.USEREVENT + 3
 pygame.time.set_timer(ADDSHIP, 600)
 
+# Create custom event for enemy shooting
+SHOOT = pygame.USEREVENT + 4
+pygame.time.set_timer(SHOOT, 500)
+
 # Instantiate player
 player = Player()
 
@@ -204,7 +240,9 @@ ships = pygame.sprite.Group()
 all_sprites = pygame.sprite.Group()
 all_sprites.add(player)
 
-# ADD BACKGROUND MUSIC
+# ---------------------------------------------------------------
+#                ADD BACKGROUND MUSIC
+# ---------------------------------------------------------------
 # Sound source: Dillon Robinson - artist Dillon Robinson
 # pygame.mixer.music.load("sound/theme.wav")
 # pygame.mixer.music.play(loops=-1)
@@ -218,6 +256,7 @@ all_sprites.add(player)
 # Adjust volume levels
 # explosion_sound.set_volume(0.5)
 # shoot_sound.set_volume(0.5)
+# -----------------------------------------------------------------
 
 # Set up loop using boolean variable
 running = True
@@ -267,6 +306,12 @@ while running:
                     ships.add(new_ship)
                     enemies.add(new_ship)
                     all_sprites.add(new_ship)
+                if stage >= 4:
+                    if event.type == SHOOT:
+                        for entity in ships:
+                            num = random.randint(1, 10)
+                            if num < 4:
+                                entity.shoot()
             if stage == 4:
                 pygame.time.set_timer(ADDSHIP, 400)
 
@@ -291,9 +336,11 @@ while running:
     # Check is enemies collide with player
     if pygame.sprite.spritecollideany(player, enemies):
         # explosion_sound.play()
-        player.kill()
-        pygame.time.delay(500)
-        running = False
+        player.lives -= 1
+        if player.lives == 0:
+            player.kill()
+            pygame.time.delay(500)
+            running = False
 
     # Draw and update score on the screen
     draw_text(screen, str(score), 18, SCREEN_WIDTH / 2, 10)
@@ -318,5 +365,3 @@ while running:
 # All done! Stop music
 pygame.mixer.music.stop()
 pygame.mixer.quit()
-
-
