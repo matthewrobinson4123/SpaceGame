@@ -65,9 +65,15 @@ class Player(pygame.sprite.Sprite):
         self.rect = self.surf.get_rect()
         self.lives = 1
         self.p1 = False
-        self.p2 = False
+        self.shield = 0
+        self.hidden = False
+        self.hide_timer = pygame.time.get_ticks()
 
     def update(self, pressed_keys):
+        #  reappear after death
+        if self.hidden and pygame.time.get_ticks() - self.hide_timer > 1000:
+            self.hidden = False
+            self.rect = self.surf.get_rect()
         if pressed_keys[K_UP]:
             self.rect.move_ip(0, -5)
         if pressed_keys[K_DOWN]:
@@ -78,14 +84,15 @@ class Player(pygame.sprite.Sprite):
             self.rect.move_ip(5, 0)
 
         # keep player on screen
-        if self.rect.left < 0:
-            self.rect.left = 0
-        if self.rect.right > SCREEN_WIDTH:
-            self.rect.right = SCREEN_WIDTH
-        if self.rect.top <= 0:
-            self.rect.top = 0
-        if self.rect.bottom >= SCREEN_HEIGHT:
-            self.rect.bottom = SCREEN_HEIGHT
+        if not self.hidden:
+            if self.rect.left < 0:
+                self.rect.left = 0
+            if self.rect.right > SCREEN_WIDTH:
+                self.rect.right = SCREEN_WIDTH
+            if self.rect.top <= 0:
+                self.rect.top = 0
+            if self.rect.bottom >= SCREEN_HEIGHT:
+                self.rect.bottom = SCREEN_HEIGHT
 
     # shoot lasers
     def shoot(self):
@@ -99,6 +106,13 @@ class Player(pygame.sprite.Sprite):
             lasers.add(lower_laser)
             all_sprites.add(upper_laser)
             all_sprites.add(lower_laser)
+        shoot_sound.play()
+
+    # temporarily hide player
+    def hide(self):
+        self.hidden = True
+        self.hide_timer = pygame.time.get_ticks()
+        self.rect.center = (SCREEN_WIDTH / 2, SCREEN_HEIGHT + 200)
 
 
 # Define enemy class
@@ -135,7 +149,8 @@ class Ship(pygame.sprite.Sprite):
                 random.randint(0, SCREEN_HEIGHT)
             )
         )
-        self.speed = random.randint(5, 10)
+        self.speed = random.randint(5, 9)
+        self.just_shot = False
 
     # Move sprite by speed
     # Remove off screen
@@ -146,9 +161,13 @@ class Ship(pygame.sprite.Sprite):
 
     # add shooting for enemy
     def shoot(self):
-        new_laser = Laser(self.rect.left, self.rect.centery, 3)
-        enemies.add(new_laser)
-        all_sprites.add(new_laser)
+        if not self.just_shot:
+            new_laser = Laser(self.rect.left, self.rect.centery, 3)
+            enemies.add(new_laser)
+            all_sprites.add(new_laser)
+            shoot_sound.play()
+        else:
+            self.just_shot = False
 
 
 # Define the star object
@@ -192,7 +211,29 @@ class Laser(pygame.sprite.Sprite):
             self.rect.move_ip(self.speed, -10)
         elif self.id == 3:
             self.rect.move_ip(-10, 0)
-        if self.rect.left >= SCREEN_WIDTH:
+        if self.rect.left >= SCREEN_WIDTH or self.rect.right < 0:
+            self.kill()
+
+
+class PUP(pygame.sprite.Sprite):
+    def __init__(self):
+        super().__init__()
+        self.surf = pygame.image.load("images/powerup.png")
+        self.surf.set_colorkey((255, 255, 255), RLEACCEL)
+        self.rect = self.surf.get_rect(
+            center=(
+                random.randint(SCREEN_WIDTH + 20, SCREEN_WIDTH + 100),
+                random.randint(0, SCREEN_HEIGHT)
+            )
+        )
+        self.speed = -5
+        self.id = random.randint(1, 3)
+
+    # Move sprite by speed
+    # Remove off screen
+    def update(self):
+        self.rect.move_ip(self.speed, 0)
+        if self.rect.right < 0:
             self.kill()
 
 
@@ -227,6 +268,10 @@ pygame.time.set_timer(ADDSHIP, 600)
 SHOOT = pygame.USEREVENT + 4
 pygame.time.set_timer(SHOOT, 500)
 
+# Create custom event for power up spawning
+POWER = pygame.USEREVENT + 5
+pygame.time.set_timer(POWER, 5000)
+
 # Instantiate player
 player = Player()
 
@@ -237,25 +282,26 @@ enemies = pygame.sprite.Group()
 stars = pygame.sprite.Group()
 lasers = pygame.sprite.Group()
 ships = pygame.sprite.Group()
+pups = pygame.sprite.Group()
+you = pygame.sprite.Group()
 all_sprites = pygame.sprite.Group()
 all_sprites.add(player)
+you.add(player)
 
 # ---------------------------------------------------------------
 #                ADD BACKGROUND MUSIC
 # ---------------------------------------------------------------
 # Sound source: Dillon Robinson - artist Dillon Robinson
-# pygame.mixer.music.load("sound/theme.wav")
-# pygame.mixer.music.play(loops=-1)
-# pygame.mixer.music.set_volume(0.3)
+pygame.mixer.music.load('sounds/theme.wav')
+pygame.mixer.music.play(loops=-1)
+pygame.mixer.music.set_volume(0.3)
 
-# ADD SOUND FILES
-# Sound Sources: Dillon Robinson
-# explosion_sound = pygame.mixer.Sound("sound/explosion.wav")
-# shoot_sound = pygame.mixer.Sound("sound/shooting.wav")
+explosion_sound = pygame.mixer.Sound('sounds/explosion.wav')
+shoot_sound = pygame.mixer.Sound('sounds/shooting.wav')
 
 # Adjust volume levels
-# explosion_sound.set_volume(0.5)
-# shoot_sound.set_volume(0.5)
+explosion_sound.set_volume(0.5)
+shoot_sound.set_volume(0.5)
 # -----------------------------------------------------------------
 
 # Set up loop using boolean variable
@@ -271,7 +317,6 @@ while running:
                 running = False
 
             elif event.key == K_SPACE:
-                # shoot_sound.play()
                 player.shoot()
 
             # Create pause button
@@ -292,9 +337,13 @@ while running:
             stars.add(new_star)
             all_sprites.add(new_star)
 
-        # Add an enemy?
+        elif event.type == POWER:
+            new_pup = PUP()
+            pups.add(new_pup)
+            all_sprites.add(new_pup)
 
-        if event.type == ADDENEMY:
+        # Add an enemy
+        elif event.type == ADDENEMY:
             new_enemy = Enemy()
             enemies.add(new_enemy)
             all_sprites.add(new_enemy)
@@ -310,14 +359,16 @@ while running:
                     if event.type == SHOOT:
                         for entity in ships:
                             num = random.randint(1, 10)
-                            if num < 4:
+                            if num < 5:
                                 entity.shoot()
+                                entity.just_shot = True
             if stage == 4:
+                pygame.event.clear()
                 pygame.time.set_timer(ADDSHIP, 400)
 
-        if stage == 5:
-            pygame.time.set_timer(ADDENEMY, 300)
-            pygame.event.set_blocked(ADDSHIP)
+            if stage == 5:
+                pygame.time.set_timer(ADDENEMY, 300)
+                pygame.event.set_blocked(ADDSHIP)
 
     # Get the set of keys pressed and check for user input and then update
     pressed_keys = pygame.key.get_pressed()
@@ -325,6 +376,7 @@ while running:
     enemies.update()
     stars.update()
     lasers.update()
+    pups.update()
 
     # Make screen black
     screen.fill((0, 0, 0))
@@ -334,13 +386,20 @@ while running:
         screen.blit(entity.surf, entity.rect)
 
     # Check is enemies collide with player
-    if pygame.sprite.spritecollideany(player, enemies):
-        # explosion_sound.play()
-        player.lives -= 1
-        if player.lives == 0:
-            player.kill()
-            pygame.time.delay(500)
-            running = False
+    if pygame.sprite.spritecollide(player, enemies, True):
+        explosion_sound.play()
+        if player.shield == 0:
+            player.lives -= 1
+            if player.lives == 0:
+                player.kill()
+                pygame.time.delay(1000)
+                running = False
+            else:
+                player.hide()
+                player.p1 = False
+        else:
+            player.shield -= 20
+
 
     # Draw and update score on the screen
     draw_text(screen, str(score), 18, SCREEN_WIDTH / 2, 10)
@@ -348,13 +407,29 @@ while running:
     # Draw round number on screen
     draw_text(screen, "Round: {r}".format(r=stage), 30, SCREEN_WIDTH - 100, 10)
 
+    # Draw player lives to screen
+    draw_text(screen, "Lives: {l}".format(l=player.lives), 30, 80, SCREEN_HEIGHT - 50)
+
+    # Draw player shield status
+    draw_text(screen, "Shield: {s}".format(s=player.shield), 30, SCREEN_WIDTH/2, SCREEN_HEIGHT - 50)
+
     hits = pygame.sprite.groupcollide(enemies, lasers, True, True)
     if hits:
         score += 25
         check_round()
-        # explosion_sound.play()
+        explosion_sound.play()
 
-    # Draw round number to screen
+    for power in pups:
+        if pygame.sprite.spritecollide(power, you, False):
+            power.kill()
+            for ship in you:
+                if power.id == 1:
+                    ship.p1 = True
+                elif power.id == 2:
+                    ship.shield = 100
+                elif power.id == 3:
+                    if player.lives < 3:
+                        ship.lives += 1
 
     # Update display
     pygame.display.flip()
