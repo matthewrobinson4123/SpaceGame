@@ -3,7 +3,11 @@ Arcade-style space shooter game
 Author: Matthew Robinson
 
 Music and Sounds by Dillon Robinson
-PLACE WEBSITE HERE
+https://smallcouncilband.wixsite.com/home
+https://www.facebook.com/Dillon.Robinson
+https://ca.linkedin.com/in/dillon-robinson-16432210b?challengeId=AQE-qHZ8xDvQEgAAAXbKRyufIY76L6tkAFzLuqyD3Ish4QfbgDyPayrJfyj23MDXbjX2JU6rPe029iqfz7jSDcGhoWmu75fhpg&submissionId=adf29d6c-04d8-5616-ce20-6767fccee02a
+https://vimeo.com/user60799801
+https://smallcouncil.bandcamp.com/
 
 The asteroid image found at
 https://webstockreview.net/pict/getfirst
