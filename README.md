@@ -18,6 +18,8 @@ Other "art" by Matthew Robinson
 
 Controls:
 Use arrow keys to move and space bar to shoot
+press p to pause
+press g for god mode
 
 Goal:
 Shoot asteroids and enemies to progress to the next round until the final boss round.

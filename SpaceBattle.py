@@ -14,6 +14,8 @@ from pygame import (
     QUIT,
     K_SPACE,
     K_p,
+    K_g,
+    K_1,
 )
 
 # Define global variables
@@ -22,6 +24,9 @@ SCREEN_HEIGHT = 600
 score = 0
 stage = 1
 boss_spawned = False
+god_mode = False
+boss_alive = True
+end_game_time = 0
 
 
 # Draw text onto screen
@@ -171,7 +176,8 @@ class Ship(pygame.sprite.Sprite):
     # add shooting for enemy
     def shoot(self):
         if not self.just_shot:
-            new_laser = Laser(self.rect.left, self.rect.centery, 3)
+            new_laser = Laser(self.rect.left, self.rect.centery, 0)
+            new_laser.speed = -new_laser.speed
             enemies.add(new_laser)
             all_sprites.add(new_laser)
             shoot_sound.play()
@@ -219,8 +225,6 @@ class Laser(pygame.sprite.Sprite):
             self.rect.move_ip(self.speed, 10)
         elif self.id == 2:
             self.rect.move_ip(self.speed, -10)
-        elif self.id == 3:
-            self.rect.move_ip(-self.speed, 0)
         if self.rect.left >= SCREEN_WIDTH or self.rect.right < 0:
             self.kill()
 
@@ -254,7 +258,7 @@ class Boss(pygame.sprite.Sprite):
         self.surf = pygame.image.load("images/boss.png")
         self.surf.set_colorkey((255, 255, 255), RLEACCEL)
         self.rect = self.surf.get_rect(
-            center=(SCREEN_WIDTH + 100, SCREEN_HEIGHT/2)
+            center=(SCREEN_WIDTH + 100, SCREEN_HEIGHT/2 - 10)
         )
         self.speed = -3
         self.just_shot = False
@@ -262,16 +266,38 @@ class Boss(pygame.sprite.Sprite):
 
     # Move boss onto screen
     def update(self):
-        if self.rect.left > SCREEN_WIDTH - 300:
+        if self.rect.left > SCREEN_WIDTH - 250:
             self.rect.move_ip(self.speed, 0)
 
     # add shooting for boss
     def shoot(self):
-        shot_type = random.randint(1, 4)
+        shot_type = random.randint(1, 10)
         if not self.just_shot:
-            new_laser = Laser(self.rect.left, self.rect.centery, 3)
-            enemies.add(new_laser)
-            all_sprites.add(new_laser)
+            if shot_type <= 2:
+                new_laser = Laser(self.rect.left, self.rect.centery, 0)
+                bottom_laser = Laser(self.rect.left, self.rect.bottom, 0)
+                top_laser = Laser(self.rect.left, self.rect.top, 0)
+                top_laser.speed = bottom_laser.speed = new_laser.speed = -new_laser.speed
+                enemies.add([new_laser, bottom_laser, top_laser])
+                all_sprites.add([new_laser, bottom_laser, top_laser])
+            elif 3 <= shot_type < 7:
+                new_laser = Laser(self.rect.left, self.rect.centery, 0)
+                upper_laser = Laser(self.rect.left, self.rect.centery, 1)
+                lower_laser = Laser(self.rect.left, self.rect.centery, 2)
+                lower_laser.speed = upper_laser.speed = new_laser.speed = -new_laser.speed
+                enemies.add([new_laser, upper_laser, lower_laser])
+                all_sprites.add([new_laser, upper_laser, lower_laser])
+            elif shot_type >= 7:
+                new_laser = Laser(self.rect.left, self.rect.centery, 0)
+                upper_laser = Laser(self.rect.left, self.rect.centery, 1)
+                lower_laser = Laser(self.rect.left, self.rect.centery, 2)
+                top_laser = Laser(self.rect.left, self.rect.top, 0)
+                top_upper_laser = Laser(self.rect.left, self.rect.top, 1)
+                bottom_laser = Laser(self.rect.left, self.rect.bottom, 0)
+                bottom_lower_laser = Laser(self.rect.left, self.rect.bottom, 2)
+                bottom_lower_laser.speed = bottom_laser.speed = top_upper_laser.speed = top_laser.speed = lower_laser.speed = upper_laser.speed = new_laser.speed = -new_laser.speed
+                enemies.add([new_laser, upper_laser, lower_laser, top_laser, top_upper_laser, bottom_laser, bottom_lower_laser])
+                all_sprites.add([new_laser, upper_laser, lower_laser, top_laser, top_upper_laser, bottom_laser, bottom_lower_laser])
             shoot_sound.play()
             self.just_shot = True
         else:
@@ -331,7 +357,7 @@ all_sprites.add(player)
 you.add(player)
 
 # ---------------------------------------------------------------
-#                ADD BACKGROUND MUSIC
+#                set sounds and music
 # ---------------------------------------------------------------
 # Sound source: Dillon Robinson - artist Dillon Robinson
 pygame.mixer.music.load('sounds/theme.wav')
@@ -341,11 +367,13 @@ pygame.mixer.music.set_volume(0.2)
 explosion_sound = pygame.mixer.Sound('sounds/explosion.wav')
 shoot_sound = pygame.mixer.Sound('sounds/shooting.wav')
 powerup_pickup = pygame.mixer.Sound('sounds/powerup.wav')
+boss_death_sound = pygame.mixer.Sound('sounds/bossdeath.wav')
 
 # Adjust volume levels
 explosion_sound.set_volume(0.5)
 shoot_sound.set_volume(0.4)
 powerup_pickup.set_volume(0.3)
+boss_death_sound.set_volume(0.7)
 # -----------------------------------------------------------------
 
 # Set up loop using boolean variable
@@ -360,6 +388,14 @@ while running:
             if event.key == K_ESCAPE:
                 running = False
 
+            # God mode for debugging purposes
+            elif event.key == K_g:
+                if god_mode:
+                    god_mode = False
+                else:
+                    god_mode = True
+                    player.p1 = True
+
             elif event.key == K_SPACE:
                 player.shoot()
 
@@ -371,6 +407,11 @@ while running:
                         if button.type == KEYDOWN:
                             if button.key == K_p:
                                 paused = False
+
+            if god_mode:
+                if event.key == K_1:
+                    score += 25
+                    check_round()
 
         # Did user click to close app? stop loop
         elif event.type == QUIT:
@@ -422,9 +463,9 @@ while running:
 
         if score == 4300:
             pygame.time.set_timer(ADDENEMY, 200)
-            pygame.event.set_blocked(ADDSHIP)
 
         if score == 5500:
+            pygame.time.set_timer(SHOOT, 350)
             pygame.mixer.music.stop()
             pygame.mixer.music.unload()
             pygame.mixer.music.load('sounds/bosstheme.wav')
@@ -448,19 +489,20 @@ while running:
         screen.blit(entity.surf, entity.rect)
 
     # Check is enemies collide with player
-    if pygame.sprite.spritecollide(player, enemies, True):
-        explosion_sound.play()
-        if player.shield == 0:
-            player.lives -= 1
-            if player.lives == 0:
-                player.kill()
-                pygame.time.delay(1000)
-                running = False
+    if not god_mode:
+        if pygame.sprite.spritecollide(player, enemies, True):
+            explosion_sound.play()
+            if player.shield == 0:
+                player.lives -= 1
+                if player.lives == 0:
+                    player.kill()
+                    pygame.time.delay(1000)
+                    running = False
+                else:
+                    player.hide()
+                    player.p1 = False
             else:
-                player.hide()
-                player.p1 = False
-        else:
-            player.shield -= 20
+                player.shield -= 20
 
     # Draw and update score on the screen
     draw_text(screen, str(score), 18, SCREEN_WIDTH / 2, 10)
@@ -475,13 +517,27 @@ while running:
     draw_text(screen, "Shield: {s}".format(s=player.shield), 30, SCREEN_WIDTH/2, SCREEN_HEIGHT - 50)
 
     if boss_spawned:
-        draw_text(screen, "BOSS HEALTH: {h}".format(h=boss.health), 20, SCREEN_WIDTH/2, 20)
+        draw_text(screen, "BOSS HEALTH: {h}".format(h=boss.health), 20, SCREEN_WIDTH/2, 30)
 
     hits = pygame.sprite.groupcollide(enemies, lasers, True, True)
     if hits:
         score += 25
         check_round()
         explosion_sound.play()
+
+    for baddie in bosses:
+        if pygame.sprite.spritecollide(baddie, lasers, True):
+            boss.health -= 20
+            if boss.health == 0:
+                boss_death_sound.play()
+                boss_alive = False
+                boss.kill()
+                end_game_timer = pygame.time.get_ticks()
+
+    if not boss_alive:
+        draw_text(screen, "YOU WIN", 50, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2)
+        if pygame.time.get_ticks() - end_game_timer > 2000:
+            running = False
 
     for power in pups:
         if pygame.sprite.spritecollide(power, you, False):
