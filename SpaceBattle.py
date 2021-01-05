@@ -21,7 +21,7 @@ SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 600
 score = 0
 stage = 1
-BOSSHEALTH = 250
+boss_spawned = False
 
 
 # Draw text onto screen
@@ -175,6 +175,7 @@ class Ship(pygame.sprite.Sprite):
             enemies.add(new_laser)
             all_sprites.add(new_laser)
             shoot_sound.play()
+            self.just_shot = True
         else:
             self.just_shot = False
 
@@ -207,7 +208,7 @@ class Laser(pygame.sprite.Sprite):
         self.rect = self.surf.get_rect()
         self.rect.left = x
         self.rect.bottom = y
-        self.speed = 10
+        self.speed = 15
         self.id = z
 
     # check what type of laser and update location on screen
@@ -219,7 +220,7 @@ class Laser(pygame.sprite.Sprite):
         elif self.id == 2:
             self.rect.move_ip(self.speed, -10)
         elif self.id == 3:
-            self.rect.move_ip(-10, 0)
+            self.rect.move_ip(-self.speed, 0)
         if self.rect.left >= SCREEN_WIDTH or self.rect.right < 0:
             self.kill()
 
@@ -235,7 +236,7 @@ class PUP(pygame.sprite.Sprite):
                 random.randint(0, SCREEN_HEIGHT)
             )
         )
-        self.speed = -5
+        self.speed = -4
         self.id = random.randint(1, 3)
 
     # Move sprite by speed
@@ -244,6 +245,37 @@ class PUP(pygame.sprite.Sprite):
         self.rect.move_ip(self.speed, 0)
         if self.rect.right < 0:
             self.kill()
+
+
+# Define boss class
+class Boss(pygame.sprite.Sprite):
+    def __init__(self):
+        super().__init__()
+        self.surf = pygame.image.load("images/boss.png")
+        self.surf.set_colorkey((255, 255, 255), RLEACCEL)
+        self.rect = self.surf.get_rect(
+            center=(SCREEN_WIDTH + 100, SCREEN_HEIGHT/2)
+        )
+        self.speed = -3
+        self.just_shot = False
+        self.health = 500
+
+    # Move boss onto screen
+    def update(self):
+        if self.rect.left > SCREEN_WIDTH - 300:
+            self.rect.move_ip(self.speed, 0)
+
+    # add shooting for boss
+    def shoot(self):
+        shot_type = random.randint(1, 4)
+        if not self.just_shot:
+            new_laser = Laser(self.rect.left, self.rect.centery, 3)
+            enemies.add(new_laser)
+            all_sprites.add(new_laser)
+            shoot_sound.play()
+            self.just_shot = True
+        else:
+            self.just_shot = False
 
 
 # Setup for music and sound playback
@@ -293,6 +325,7 @@ lasers = pygame.sprite.Group()
 ships = pygame.sprite.Group()
 pups = pygame.sprite.Group()
 you = pygame.sprite.Group()
+bosses = pygame.sprite.Group()
 all_sprites = pygame.sprite.Group()
 all_sprites.add(player)
 you.add(player)
@@ -311,8 +344,8 @@ powerup_pickup = pygame.mixer.Sound('sounds/powerup.wav')
 
 # Adjust volume levels
 explosion_sound.set_volume(0.5)
-shoot_sound.set_volume(0.5)
-powerup_pickup.set_volume(0.5)
+shoot_sound.set_volume(0.4)
+powerup_pickup.set_volume(0.3)
 # -----------------------------------------------------------------
 
 # Set up loop using boolean variable
@@ -370,23 +403,33 @@ while running:
                     if event.type == SHOOT:
                         for entity in ships:
                             num = random.randint(1, 10)
-                            if num < 5:
+                            if num < 6:
                                 entity.shoot()
-                                entity.just_shot = True
-            if score == 550:
-                pygame.event.clear()
-                pygame.time.set_timer(ADDSHIP, 400)
+            if stage == 10:
+                if not boss_spawned:
+                    boss = Boss()
+                    bosses.add(boss)
+                    all_sprites.add(boss)
+                    boss_spawned = True
+                if event.type == SHOOT:
+                    num = random.randint(1, 10)
+                    if num < 7:
+                        boss.shoot()
 
-            if score == 1000:
-                pygame.time.set_timer(ADDENEMY, 300)
-                pygame.event.set_blocked(ADDSHIP)
+        if score == 1000:
+            pygame.event.clear()
+            pygame.time.set_timer(ADDSHIP, 350)
 
-            if score == 250:
-                pygame.mixer.music.stop()
-                pygame.mixer.music.unload()
-                pygame.mixer.music.load('sounds/bosstheme.wav')
-                pygame.mixer.music.play(loops=-1)
-                pygame.mixer.music.set_volume(0.6)
+        if score == 4300:
+            pygame.time.set_timer(ADDENEMY, 200)
+            pygame.event.set_blocked(ADDSHIP)
+
+        if score == 5500:
+            pygame.mixer.music.stop()
+            pygame.mixer.music.unload()
+            pygame.mixer.music.load('sounds/bosstheme.wav')
+            pygame.mixer.music.play(loops=-1)
+            pygame.mixer.music.set_volume(0.6)
 
     # Get the set of keys pressed and check for user input and then update
     pressed_keys = pygame.key.get_pressed()
@@ -395,6 +438,7 @@ while running:
     stars.update()
     lasers.update()
     pups.update()
+    bosses.update()
 
     # Make screen black
     screen.fill((0, 0, 0))
@@ -418,7 +462,6 @@ while running:
         else:
             player.shield -= 20
 
-
     # Draw and update score on the screen
     draw_text(screen, str(score), 18, SCREEN_WIDTH / 2, 10)
 
@@ -430,6 +473,9 @@ while running:
 
     # Draw player shield status
     draw_text(screen, "Shield: {s}".format(s=player.shield), 30, SCREEN_WIDTH/2, SCREEN_HEIGHT - 50)
+
+    if boss_spawned:
+        draw_text(screen, "BOSS HEALTH: {h}".format(h=boss.health), 20, SCREEN_WIDTH/2, 20)
 
     hits = pygame.sprite.groupcollide(enemies, lasers, True, True)
     if hits:
@@ -450,7 +496,7 @@ while running:
                     if player.lives < 3:
                         ship.lives += 1
                 if ship.p1 and (ship.shield == 100) and (ship.lives == 3):
-                    score += 100
+                    score += 50
                     check_round()
 
     # Update display
