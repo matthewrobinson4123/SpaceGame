@@ -36,22 +36,31 @@ def draw_text(surf, text, size, x, y):
 # Check and update which round it is
 def check_round():
     global stage
+    # Round 2
     if score == 100:
         stage += 1
+    # Round 3
     elif score == 250:
         stage += 1
+    # Round 4
     elif score == 550:
         stage += 1
+    # Round 5
     elif score == 1000:
         stage += 1
+    # Round 6
     elif score == 1600:
         stage += 1
+    # Round 7
     elif score == 2350:
         stage += 1
+    # Round 8
     elif score == 3250:
         stage += 1
+    # Round 9
     elif score == 4300:
         stage += 1
+    # Round 10
     elif score == 5500:
         stage += 1
 
@@ -294,14 +303,16 @@ you.add(player)
 # Sound source: Dillon Robinson - artist Dillon Robinson
 pygame.mixer.music.load('sounds/theme.wav')
 pygame.mixer.music.play(loops=-1)
-pygame.mixer.music.set_volume(0.3)
+pygame.mixer.music.set_volume(0.2)
 
 explosion_sound = pygame.mixer.Sound('sounds/explosion.wav')
 shoot_sound = pygame.mixer.Sound('sounds/shooting.wav')
+powerup_pickup = pygame.mixer.Sound('sounds/powerup.wav')
 
 # Adjust volume levels
 explosion_sound.set_volume(0.5)
 shoot_sound.set_volume(0.5)
+powerup_pickup.set_volume(0.5)
 # -----------------------------------------------------------------
 
 # Set up loop using boolean variable
@@ -362,13 +373,20 @@ while running:
                             if num < 5:
                                 entity.shoot()
                                 entity.just_shot = True
-            if stage == 4:
+            if score == 550:
                 pygame.event.clear()
                 pygame.time.set_timer(ADDSHIP, 400)
 
-            if stage == 5:
+            if score == 1000:
                 pygame.time.set_timer(ADDENEMY, 300)
                 pygame.event.set_blocked(ADDSHIP)
+
+            if score == 250:
+                pygame.mixer.music.stop()
+                pygame.mixer.music.unload()
+                pygame.mixer.music.load('sounds/bosstheme.wav')
+                pygame.mixer.music.play(loops=-1)
+                pygame.mixer.music.set_volume(0.6)
 
     # Get the set of keys pressed and check for user input and then update
     pressed_keys = pygame.key.get_pressed()
@@ -422,6 +440,7 @@ while running:
     for power in pups:
         if pygame.sprite.spritecollide(power, you, False):
             power.kill()
+            powerup_pickup.play()
             for ship in you:
                 if power.id == 1:
                     ship.p1 = True
@@ -430,6 +449,9 @@ while running:
                 elif power.id == 3:
                     if player.lives < 3:
                         ship.lives += 1
+                if ship.p1 and (ship.shield == 100) and (ship.lives == 3):
+                    score += 100
+                    check_round()
 
     # Update display
     pygame.display.flip()
